@@ -1,4 +1,3 @@
-
 # 📄 Business Requirements Document (BRD)
 
 ## 1. Project Overview
