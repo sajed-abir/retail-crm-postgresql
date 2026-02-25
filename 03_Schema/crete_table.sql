@@ -81,10 +81,31 @@ CREATE TABLE Orders (
 CREATE TABLE Order_Items (
     order_item_id SERIAL PRIMARY KEY,
     order_id INT NOT NULL,
-    varient_id INT,
+    variant_id INT,
     quantity INT NOT NULL CHECK (quantity > 0),
     unit_price NUMERIC(10, 2) NOT NULL CHECK (unit_price >= 0),
     total_price NUMERIC(10, 2) NOT NULL CHECK (total_price >= 0),
     CONSTRAINT fk_orderitem_order FOREIGN KEY (order_id) REFERENCES Orders (order_id) ON DELETE CASCADE,
     CONSTRAINT fk_orderitem_variant FOREIGN KEY (variant_id) REFERENCES Product_Variants (variant_id) ON DELETE SET NULL
-)
+);
+
+CREATE TABLE Payments (
+    payment_id SERIAL PRIMARY KEY,
+    order_id INT NOT NULL,
+    payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    amount NUMERIC(10, 2) not NULL check (amount >= 0),
+    payment_method VARCHAR(50),
+    payment_status VARCHAR(50) DEFAULT 'Pending',
+    transaction_reference VARCHAR(100),
+    CONSTRAINT fk_payment_order Foreign Key (order_id) REFERENCES Orders (order_id) on delete CASCADE
+);
+
+CREATE TABLE Returns (
+    return_id SERIAL PRIMARY KEY,
+    order_item_id INT NOT NULL,
+    return_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    return_reason TEXT,
+    refund_amount NUMERIC(10, 2) DEFAULT 0 CHECK (refund_amount >= 0),
+    return_status VARCHAR(50) DEFAULT 'Requested',
+    CONSTRAINT fk_return_orderitem FOREIGN KEY (order_item_id) REFERENCES Order_Items (order_item_id) ON DELETE CASCADE
+);
