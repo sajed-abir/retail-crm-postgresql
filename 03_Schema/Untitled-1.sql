@@ -109,3 +109,5 @@ CREATE TABLE Returns (
     return_status VARCHAR(50) DEFAULT 'Requested',
     CONSTRAINT fk_return_orderitem FOREIGN KEY (order_item_id) REFERENCES Order_Items (order_item_id) ON DELETE CASCADE
 );
+
+ALTER TABLE Orders DROP CONSTRAINT fk_order_billing_addresss;
