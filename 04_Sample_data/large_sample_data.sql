@@ -1,4 +1,5 @@
 -- Parent Category
+-- ===============================
 INSERT INTO
     Categories (category_name)
 VALUES ('Electronics'),
@@ -15,6 +16,8 @@ VALUES ('Electronics'),
     ('Pet Supplies');
 
 -- Sub-categoies
+-- ===============================
+
 -- Electronics
 INSERT INTO
     Categories (
@@ -23,57 +26,140 @@ INSERT INTO
     )
 VALUES ('Mobile Phones', 1),
     ('Laptops', 1),
-    ('Accessories', 1),
+    ('Accessories', 1);
 
 -- Clothing
-('Men Clothing', 2), ('Women Clothing', 2), ('Kids Clothing', 2),
+INSERT INTO
+    Categories (
+        category_name,
+        parent_category_id
+    )
+VALUES ('Men Clothing', 2),
+    ('Women Clothing', 2),
+    ('Kids Clothing', 2);
 
 -- Home & Kitchen
-('Furniture', 3), ('Cookware', 3), ('Home Decor', 3),
+INSERT INTO
+    Categories (
+        category_name,
+        parent_category_id
+    )
+VALUES ('Furniture', 3),
+    ('Cookware', 3),
+    ('Home Decor', 3);
 
 -- Books
-('Fiction', 4), ('Non-Fiction', 4), ('Educational', 4),
+INSERT INTO
+    Categories (
+        category_name,
+        parent_category_id
+    )
+VALUES ('Fiction', 4),
+    ('Non-Fiction', 4),
+    ('Educational', 4);
 
--- Sports
-('Gym Equipment', 5), ('Outdoor Gear', 5), ('Sportswear', 5),
+-- Sports & Outdoors
+INSERT INTO
+    Categories (
+        category_name,
+        parent_category_id
+    )
+VALUES ('Gym Equipment', 5),
+    ('Outdoor Gear', 5),
+    ('Sportswear', 5);
 
--- Beauty
-('Skincare', 6), ('Makeup', 6), ('Haircare', 6),
+-- Beauty & Personal Care
+INSERT INTO
+    Categories (
+        category_name,
+        parent_category_id
+    )
+VALUES ('Skincare', 6),
+    ('Makeup', 6),
+    ('Haircare', 6);
 
--- Toys
-('Board Games', 7), ('Action Figures', 7), ('Puzzles', 7),
+-- Toys & Games
+INSERT INTO
+    Categories (
+        category_name,
+        parent_category_id
+    )
+VALUES ('Board Games', 7),
+    ('Action Figures', 7),
+    ('Puzzles', 7);
 
 -- Groceries
-('Beverages', 8), ('Snacks', 8), ('Dairy', 8),
+INSERT INTO
+    Categories (
+        category_name,
+        parent_category_id
+    )
+VALUES ('Beverages', 8),
+    ('Snacks', 8),
+    ('Dairy', 8);
 
 -- Automotive
-('Car Accessories', 9), ('Motorbike Parts', 9), ('Oils & Fluids', 9),
+INSERT INTO
+    Categories (
+        category_name,
+        parent_category_id
+    )
+VALUES ('Car Accessories', 9),
+    ('Motorbike Parts', 9),
+    ('Oils & Fluids', 9);
 
 -- Health
-('Supplements', 10),
-('Medical Devices', 10),
-('Personal Hygiene', 10),
-
--- Office
-('Stationery', 11),
-('Office Furniture', 11),
-('Electronics Accessories', 11),
-
--- Pet
-('Pet Food', 12), ('Pet Toys', 12), ('Pet Grooming', 12);
-
--- Gererates 300 realistic products
 INSERT INTO
-    Products (
-        category_id,
+    Categories (
+        category_name,
+        parent_category_id
+    )
+VALUES ('Supplements', 10),
+    ('Medical Devices', 10),
+    ('Personal Hygiene', 10);
+
+-- Office Supplies
+INSERT INTO
+    Categories (
+        category_name,
+        parent_category_id
+    )
+VALUES ('Stationery', 11),
+    ('Office Furniture', 11),
+    ('Electronics Accessories', 11);
+
+-- Pet Supplies
+INSERT INTO
+    Categories (
+        category_name,
+        parent_category_id
+    )
+VALUES ('Pet Food', 12),
+    ('Pet Toys', 12),
+    ('Pet Grooming', 12);
+
+-- Gererates 5000 realistic products
+-- =====================================
+TRUNCATE TABLE Products RESTART IDENTITY CASCADE;
+INSERT INTO
+    products (
         product_name,
         description,
-        base_price
+        category_id,
+        base_price,
+        is_active
     )
-SELECT (RANDOM() * 35 + 13)::INT, 'Product ' || gs, 'Description for product ' || gs, (RANDOM() * 10000 + 200)::NUMERIC(10, 2)
-FROM generate_series(1, 300) gs;
+SELECT 'Product ' || gs, 'Description for Product ' || gs, c.category_id, ROUND(
+        (RANDOM() * 500 + 10)::numeric, 2
+    ), (RANDOM() > 0.1)
+FROM generate_series(1, 5000) gs
+    JOIN (
+        SELECT category_id, ROW_NUMBER() OVER () AS rn
+        FROM categories
+    ) c ON ((gs - 1) % 48) + 1 = c.rn;
 
 -- Generate 3 variants per product
+-- ====================================
 INSERT INTO
     Product_Variants (
         product_id,
@@ -95,7 +181,23 @@ SELECT p.product_id, 'Variant ' || gs, (
     ) [floor(random() * 5) + 1], 'SKU-' || p.product_id || '-' || gs, NULL, (RANDOM() * 200)::INT
 FROM Products p, generate_series(1, 3) gs;
 
+-- adds 15% variants having price overrides
+
+UPDATE Product_Variants pv
+SET
+    price_override = ROUND(
+        (
+            p.base_price + (RANDOM() * 50)
+        )::numeric,
+        2
+    )
+FROM Products p
+WHERE
+    pv.product_id = p.product_id
+    AND RANDOM() < 0.15;
+
 -- Generates 1000 customers
+-- ===============================
 INSERT INTO
     Customer (
         first_name,
@@ -107,6 +209,7 @@ SELECT 'Customer' || gs, 'Last' || gs, 'customer' || gs || '@mail.com', '017' ||
 FROM generate_series(1, 1000) gs;
 
 -- Generates 2 addresses per customer
+-- =====================================
 INSERT INTO
     Customer_Address (
         customer_id,
@@ -123,4 +226,188 @@ SELECT c.customer_id, 'Street ' || c.customer_id, (
     ) [floor(random() * 4) + 1], '1' || floor(random() * 9999), 'Bangladesh', (ARRAY['Shipping', 'Billing']) [floor(random() * 2) + 1]
 FROM Customer c, generate_series(1, 2);
 
-SELECT * from customer_address;
+-- Generates Discounts
+INSERT INTO
+    Discounts (
+        discount_code,
+        discount_type,
+        discount_value,
+        start_date,
+        end_date,
+        is_active
+    )
+SELECT
+    'DISC' || gs,
+    (ARRAY['Percentage', 'Flat']) [floor(random() * 2) + 1],
+    CASE
+        WHEN (ARRAY['Percentage', 'Flat']) [floor(random() * 2) + 1] = 'Percentage' THEN ROUND(
+            (RANDOM() * 25 + 5)::numeric,
+            2
+        ) -- 5% - 30%
+        ELSE ROUND(
+            (RANDOM() * 450 + 50)::numeric,
+            2
+        ) -- 50 - 500 flat
+    END,
+    CURRENT_DATE - (RANDOM() * 30)::INT, -- start_date in past 30 days
+    CURRENT_DATE + (RANDOM() * 60)::INT, -- end_date in next 60 days
+    (RANDOM() > 0.2) -- ~80% active
+FROM generate_series(1, 50) gs;
+
+--Generate 1500 Orders (for 1000 Customers)
+TRUNCATE TABLE Returns,
+Payments,
+Order_Items,
+Orders RESTART IDENTITY CASCADE;
+
+
+INSERT INTO
+    Orders (
+        customer_id,
+        shipping_address_id,
+        billing_address_id,
+        discount_id,
+        order_status,
+        order_date
+    )
+SELECT
+    c.customer_id,
+    sa.address_id,
+    ba.address_id,
+    CASE
+        WHEN RANDOM() < 0.3 THEN (
+            SELECT discount_id
+            FROM Discounts
+            ORDER BY RANDOM()
+            LIMIT 1
+        )
+        ELSE NULL
+    END,
+    CASE floor(RANDOM() * 4)::int
+        WHEN 0 THEN 'Pending'
+        WHEN 1 THEN 'Completed'
+        WHEN 2 THEN 'Shipped'
+        WHEN 3 THEN 'Cancelled'
+    END,
+    CURRENT_TIMESTAMP - (
+        (RANDOM() * 30)::INT || ' days'
+    )::interval
+FROM
+    Customer c
+    JOIN Customer_Address sa ON sa.customer_id = c.customer_id
+    AND sa.address_type = 'Shipping'
+    JOIN Customer_Address ba ON ba.customer_id = c.customer_id
+    AND ba.address_type = 'Billing'
+ORDER BY RANDOM()
+LIMIT 1500;
+
+-- Updates total_amount of Orders table
+UPDATE Orders o
+SET
+    total_amount = COALESCE(sub.total, 0)
+FROM (
+        SELECT order_id, SUM(total_price) AS total
+        FROM Order_Items
+        GROUP BY
+            order_id
+    ) sub
+WHERE
+    o.order_id = sub.order_id;
+-- Generates Order Items
+TRUNCATE TABLE Order_Items RESTART IDENTITY CASCADE;
+INSERT INTO
+    Order_Items (
+        order_id,
+        variant_id,
+        quantity,
+        unit_price,
+        total_price
+    )
+SELECT
+    o.order_id,
+    pv.variant_id,
+    floor(RANDOM() * 5 + 1)::INT AS qty,
+    COALESCE(
+        pv.price_override,
+        p.base_price
+    ) AS unit_price,
+    COALESCE(
+        pv.price_override,
+        p.base_price
+    ) * floor(RANDOM() * 5 + 1)::INT AS total_price
+FROM
+    Orders o
+    JOIN LATERAL generate_series(
+        1,
+        floor(RANDOM() * 5 + 1)::INT
+    ) gs ON TRUE -- 1-5 items per order
+    JOIN LATERAL (
+        SELECT pv.variant_id, pv.product_id, pv.price_override
+        FROM Product_Variants pv
+        ORDER BY RANDOM()
+        LIMIT 1
+    ) pv ON TRUE
+    JOIN Products p ON pv.product_id = p.product_id;
+
+-- Generates Payments (1 per order)
+INSERT INTO
+    Payments (
+        order_id,
+        amount,
+        payment_method,
+        payment_status,
+        transaction_reference
+    )
+SELECT o.order_id, o.total_amount, (
+        ARRAY[
+            'Credit Card', 'Bkash', 'Cash on Delivery', 'Paypal'
+        ]
+    ) [floor(RANDOM() * 4 + 1)::int], (
+        ARRAY[
+            'Pending', 'Completed', 'Failed'
+        ]
+    ) [floor(RANDOM() * 3 + 1)::int], 'TXN-' || o.order_id || '-' || floor(RANDOM() * 100000)
+FROM Orders o;
+
+-- Generates Returns 
+INSERT INTO
+    Returns (
+        order_item_id,
+        return_reason,
+        refund_amount,
+        return_status
+    )
+SELECT oi.order_item_id, (
+        ARRAY[
+            'Damaged product', 'Wrong item sent', 'Better price found', 'Not satisfied', 'Product expired'
+        ]
+    ) [floor(RANDOM() * 5 + 1)::int], ROUND(
+        (oi.total_price * RANDOM())::numeric, 2
+    ), (
+        ARRAY[
+            'Requested', 'Approved', 'Rejected'
+        ]
+    ) [floor(RANDOM() * 3 + 1)::int]
+FROM Order_Items oi
+WHERE
+    RANDOM() < 0.08;
+-- ~8% returns
+-- ===============================
+SELECT 'Categories' AS table_name, COUNT(*) AS row_count
+FROM Categories
+UNION ALL
+SELECT 'Products', COUNT(*)
+FROM Products
+UNION ALL
+SELECT 'Product_Variants', COUNT(*)
+FROM Product_Variants
+UNION ALL
+SELECT 'Customer', COUNT(*)
+FROM Customer
+UNION ALL
+SELECT 'Customer_Address', COUNT(*)
+FROM Customer_Address;
+
+SELECT * FROM returns;
+SELECT order_status, COUNT(*) FROM Orders GROUP BY order_status;
+
