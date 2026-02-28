@@ -254,13 +254,15 @@ SELECT
     (RANDOM() > 0.2) -- ~80% active
 FROM generate_series(1, 50) gs;
 
---Generate 1500 Orders (for 1000 Customers)
+-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+-- TRUNCATE dependent tables first
 TRUNCATE TABLE Returns,
 Payments,
 Order_Items,
 Orders RESTART IDENTITY CASCADE;
 
-
+-- Generate exactly 1500 Orders
 INSERT INTO
     Orders (
         customer_id,
@@ -283,116 +285,24 @@ SELECT
         )
         ELSE NULL
     END,
-    CASE floor(RANDOM() * 4)::int
-        WHEN 0 THEN 'Pending'
-        WHEN 1 THEN 'Completed'
-        WHEN 2 THEN 'Shipped'
-        WHEN 3 THEN 'Cancelled'
-    END,
+    (
+        ARRAY[
+            'Pending',
+            'Completed',
+            'Shipped',
+            'Cancelled'
+        ]
+    ) [floor(RANDOM() * 4) + 1],
     CURRENT_TIMESTAMP - (
-        (RANDOM() * 30)::INT || ' days'
+        (floor(RANDOM() * 30)) || ' days'
     )::interval
 FROM
-    Customer c
+    generate_series(1, 1500) gs
+    JOIN Customer c ON c.customer_id = ((gs - 1) % 1000 + 1)
     JOIN Customer_Address sa ON sa.customer_id = c.customer_id
     AND sa.address_type = 'Shipping'
     JOIN Customer_Address ba ON ba.customer_id = c.customer_id
-    AND ba.address_type = 'Billing'
-ORDER BY RANDOM()
-LIMIT 1500;
-
--- Updates total_amount of Orders table
-UPDATE Orders o
-SET
-    total_amount = COALESCE(sub.total, 0)
-FROM (
-        SELECT order_id, SUM(total_price) AS total
-        FROM Order_Items
-        GROUP BY
-            order_id
-    ) sub
-WHERE
-    o.order_id = sub.order_id;
--- Generates Order Items
-TRUNCATE TABLE Order_Items RESTART IDENTITY CASCADE;
-INSERT INTO
-    Order_Items (
-        order_id,
-        variant_id,
-        quantity,
-        unit_price,
-        total_price
-    )
-SELECT
-    o.order_id,
-    pv.variant_id,
-    floor(RANDOM() * 5 + 1)::INT AS qty,
-    COALESCE(
-        pv.price_override,
-        p.base_price
-    ) AS unit_price,
-    COALESCE(
-        pv.price_override,
-        p.base_price
-    ) * floor(RANDOM() * 5 + 1)::INT AS total_price
-FROM
-    Orders o
-    JOIN LATERAL generate_series(
-        1,
-        floor(RANDOM() * 5 + 1)::INT
-    ) gs ON TRUE -- 1-5 items per order
-    JOIN LATERAL (
-        SELECT pv.variant_id, pv.product_id, pv.price_override
-        FROM Product_Variants pv
-        ORDER BY RANDOM()
-        LIMIT 1
-    ) pv ON TRUE
-    JOIN Products p ON pv.product_id = p.product_id;
-
--- Generates Payments (1 per order)
-INSERT INTO
-    Payments (
-        order_id,
-        amount,
-        payment_method,
-        payment_status,
-        transaction_reference
-    )
-SELECT o.order_id, o.total_amount, (
-        ARRAY[
-            'Credit Card', 'Bkash', 'Cash on Delivery', 'Paypal'
-        ]
-    ) [floor(RANDOM() * 4 + 1)::int], (
-        ARRAY[
-            'Pending', 'Completed', 'Failed'
-        ]
-    ) [floor(RANDOM() * 3 + 1)::int], 'TXN-' || o.order_id || '-' || floor(RANDOM() * 100000)
-FROM Orders o;
-
--- Generates Returns 
-INSERT INTO
-    Returns (
-        order_item_id,
-        return_reason,
-        refund_amount,
-        return_status
-    )
-SELECT oi.order_item_id, (
-        ARRAY[
-            'Damaged product', 'Wrong item sent', 'Better price found', 'Not satisfied', 'Product expired'
-        ]
-    ) [floor(RANDOM() * 5 + 1)::int], ROUND(
-        (oi.total_price * RANDOM())::numeric, 2
-    ), (
-        ARRAY[
-            'Requested', 'Approved', 'Rejected'
-        ]
-    ) [floor(RANDOM() * 3 + 1)::int]
-FROM Order_Items oi
-WHERE
-    RANDOM() < 0.08;
--- ~8% returns
--- ===============================
+    AND ba.address_type = 'Billing';
 SELECT 'Categories' AS table_name, COUNT(*) AS row_count
 FROM Categories
 UNION ALL
@@ -406,8 +316,19 @@ SELECT 'Customer', COUNT(*)
 FROM Customer
 UNION ALL
 SELECT 'Customer_Address', COUNT(*)
-FROM Customer_Address;
-
-SELECT * FROM returns;
-SELECT order_status, COUNT(*) FROM Orders GROUP BY order_status;
-
+FROM Customer_Address
+UNION ALL
+SELECT 'Discounts', COUNT(*)
+FROM Discounts
+UNION ALL
+SELECT 'Orders', COUNT(*)
+FROM Orders
+UNION ALL
+SELECT 'Order_Items', COUNT(*)
+FROM Order_Items
+UNION ALL
+SELECT 'Payments', COUNT(*)
+FROM Payments
+UNION ALL
+SELECT 'Returns', COUNT(*)
+FROM Returns;
