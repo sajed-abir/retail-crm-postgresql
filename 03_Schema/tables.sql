@@ -1,4 +1,6 @@
 -- Active: 1771962167652@@127.0.0.1@5432@ecommerce_db
+
+-- Customer table
 CREATE TABLE Customer (
     customer_id SERIAL PRIMARY KEY,
     first_name VARCHAR(100) NOT NULL,
@@ -9,6 +11,8 @@ CREATE TABLE Customer (
     is_active BOOLEAN DEFAULT TRUE
 );
 
+
+-- Customer Address  table
 CREATE TABLE Customer_Address (
     address_id SERIAL PRIMARY KEY,
     customer_id INT NOT NULL,
@@ -21,6 +25,7 @@ CREATE TABLE Customer_Address (
     CONSTRAINT fk_customer Foreign Key (customer_id) REFERENCES Customer (customer_id) ON DELETE CASCADE
 );
 
+-- Categories table
 CREATE TABLE Categories (
     category_id SERIAL PRIMARY KEY,
     category_name VARCHAR(100) NOT NULL,
@@ -28,6 +33,8 @@ CREATE TABLE Categories (
     CONSTRAINT fk_parent_category Foreign Key (parent_category_id) REFERENCES Categories (category_id) ON DELETE SET NULL
 );
 
+
+-- Products table
 CREATE TABLE Products (
     product_id SERIAL PRIMARY KEY,
     category_id INT NOT NULL,
@@ -38,6 +45,8 @@ CREATE TABLE Products (
     CONSTRAINT fk_product_category FOREIGN KEY (category_id) REFERENCES Categories (category_id) ON DELETE CASCADE
 );
 
+
+-- Product Variants table
 CREATE TABLE Product_Variants (
     variant_id SERIAL PRIMARY KEY,
     product_id INT NOT NULL,
@@ -51,6 +60,8 @@ CREATE TABLE Product_Variants (
     CONSTRAINT fk_variant_product Foreign Key (product_id) REFERENCES Products (product_id) ON DELETE CASCADE
 );
 
+
+-- Discounts table
 CREATE TABLE Discounts (
     discount_id SERIAL PRIMARY KEY,
     discount_code VARCHAR(50) UNIQUE NOT NULL,
@@ -61,6 +72,8 @@ CREATE TABLE Discounts (
     is_active BOOLEAN DEFAULT TRUE
 );
 
+
+-- Orders table
 CREATE TABLE Orders (
     order_id SERIAL PRIMARY KEY,
     customer_id INT NOT NULL,
@@ -78,6 +91,8 @@ CREATE TABLE Orders (
     CONSTRAINT fk_order_discount Foreign Key (discount_id) REFERENCES Discounts (discount_id) On delete set NULL
 );
 
+
+-- Order Items table
 CREATE TABLE Order_Items (
     order_item_id SERIAL PRIMARY KEY,
     order_id INT NOT NULL,
@@ -89,6 +104,8 @@ CREATE TABLE Order_Items (
     CONSTRAINT fk_orderitem_variant FOREIGN KEY (variant_id) REFERENCES Product_Variants (variant_id) ON DELETE SET NULL
 );
 
+
+-- Payments table
 CREATE TABLE Payments (
     payment_id SERIAL PRIMARY KEY,
     order_id INT NOT NULL,
@@ -100,6 +117,8 @@ CREATE TABLE Payments (
     CONSTRAINT fk_payment_order Foreign Key (order_id) REFERENCES Orders (order_id) on delete CASCADE
 );
 
+
+-- Returns table
 CREATE TABLE Returns (
     return_id SERIAL PRIMARY KEY,
     order_item_id INT NOT NULL,

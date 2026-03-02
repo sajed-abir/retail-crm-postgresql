@@ -7,6 +7,7 @@ Products,
 Discounts,
 Customer_Address,
 Customer,
-Categories RESTART IDENTITY CASCADE;
+Categories,
+Discounts RESTART IDENTITY CASCADE;
 
 SELECT COUNT(*) FROM categories;

@@ -138,28 +138,27 @@ VALUES ('Pet Food', 12),
     ('Pet Toys', 12),
     ('Pet Grooming', 12);
 
--- Gererates 5000 realistic products
--- =====================================
-TRUNCATE TABLE Products RESTART IDENTITY CASCADE;
+SELECT COUNT(*) FROM Categories;
+
+-- Generates 5000 Products
+
 INSERT INTO
-    products (
+    Products (
         product_name,
         description,
         category_id,
         base_price,
         is_active
     )
-SELECT 'Product ' || gs, 'Description for Product ' || gs, c.category_id, ROUND(
+SELECT 'Product ' || gs, 'Description for product ' || gs, ((gs - 1) % 48) + 1, ROUND(
         (RANDOM() * 500 + 10)::numeric, 2
-    ), (RANDOM() > 0.1)
-FROM generate_series(1, 5000) gs
-    JOIN (
-        SELECT category_id, ROW_NUMBER() OVER () AS rn
-        FROM categories
-    ) c ON ((gs - 1) % 48) + 1 = c.rn;
+    ), TRUE
+FROM generate_series(1, 5000) gs;
 
--- Generate 3 variants per product
--- ====================================
+SELECT COUNT(*) FROM Products;
+
+-- Generates Product Variants (3 variants per product, 15000 total)
+
 INSERT INTO
     Product_Variants (
         product_id,
@@ -174,30 +173,18 @@ SELECT p.product_id, 'Variant ' || gs, (
         ARRAY[
             'S', 'M', 'L', 'XL', 'Standard'
         ]
-    ) [floor(random() * 5) + 1], (
+    ) [floor(RANDOM() * 5) + 1], (
         ARRAY[
             'Black', 'White', 'Blue', 'Red', 'Green'
         ]
-    ) [floor(random() * 5) + 1], 'SKU-' || p.product_id || '-' || gs, NULL, (RANDOM() * 200)::INT
-FROM Products p, generate_series(1, 3) gs;
-
--- adds 15% variants having price overrides
-
-UPDATE Product_Variants pv
-SET
-    price_override = ROUND(
-        (
-            p.base_price + (RANDOM() * 50)
-        )::numeric,
-        2
-    )
+    ) [floor(RANDOM() * 5) + 1], 'SKU-' || p.product_id || '-' || gs, NULL, floor(RANDOM() * 200)
 FROM Products p
-WHERE
-    pv.product_id = p.product_id
-    AND RANDOM() < 0.15;
+    CROSS JOIN generate_series(1, 3) gs;
 
--- Generates 1000 customers
--- ===============================
+SELECT COUNT(*) FROM Product_Variants;
+
+-- GEnerates 1000 Customers
+
 INSERT INTO
     Customer (
         first_name,
@@ -205,11 +192,13 @@ INSERT INTO
         email,
         phone
     )
-SELECT 'Customer' || gs, 'Last' || gs, 'customer' || gs || '@mail.com', '017' || LPAD((10000000 + gs)::text, 8, '0')
+SELECT 'Customer' || gs, 'Last' || gs, 'customer' || gs || '@mail.com', '017' || LPAD(gs::text, 8, '0')
 FROM generate_series(1, 1000) gs;
 
--- Generates 2 addresses per customer
--- =====================================
+SELECT COUNT(*) FROM customer
+
+--Generates 200 Addresses(2 address per customer)
+
 INSERT INTO
     Customer_Address (
         customer_id,
@@ -223,10 +212,16 @@ SELECT c.customer_id, 'Street ' || c.customer_id, (
         ARRAY[
             'Dhaka', 'Chittagong', 'Sylhet', 'Khulna'
         ]
-    ) [floor(random() * 4) + 1], '1' || floor(random() * 9999), 'Bangladesh', (ARRAY['Shipping', 'Billing']) [floor(random() * 2) + 1]
-FROM Customer c, generate_series(1, 2);
+    ) [floor(RANDOM() * 4) + 1], floor(RANDOM() * 9999), 'Bangladesh', t.type
+FROM Customer c
+    CROSS JOIN (
+        VALUES ('Shipping'), ('Billing')
+    ) AS t (type);
 
--- Generates Discounts
+SELECT COUNT(*) FROM Customer_Address;
+
+-- Generates 50 Discounts
+
 INSERT INTO
     Discounts (
         discount_code,
@@ -236,33 +231,15 @@ INSERT INTO
         end_date,
         is_active
     )
-SELECT
-    'DISC' || gs,
-    (ARRAY['Percentage', 'Flat']) [floor(random() * 2) + 1],
-    CASE
-        WHEN (ARRAY['Percentage', 'Flat']) [floor(random() * 2) + 1] = 'Percentage' THEN ROUND(
-            (RANDOM() * 25 + 5)::numeric,
-            2
-        ) -- 5% - 30%
-        ELSE ROUND(
-            (RANDOM() * 450 + 50)::numeric,
-            2
-        ) -- 50 - 500 flat
-    END,
-    CURRENT_DATE - (RANDOM() * 30)::INT, -- start_date in past 30 days
-    CURRENT_DATE + (RANDOM() * 60)::INT, -- end_date in next 60 days
-    (RANDOM() > 0.2) -- ~80% active
+SELECT 'DISC' || gs, (ARRAY['Percentage', 'Flat']) [floor(RANDOM() * 2) + 1], ROUND(
+        (RANDOM() * 30 + 5)::numeric, 2
+    ), CURRENT_DATE - floor(RANDOM() * 30)::int, CURRENT_DATE + floor(RANDOM() * 60)::int, TRUE
 FROM generate_series(1, 50) gs;
 
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+SELECT COUNT(*) FROM Discounts;
 
--- TRUNCATE dependent tables first
-TRUNCATE TABLE Returns,
-Payments,
-Order_Items,
-Orders RESTART IDENTITY CASCADE;
+-- Generates 1500 Orders
 
--- Generate exactly 1500 Orders
 INSERT INTO
     Orders (
         customer_id,
@@ -272,55 +249,106 @@ INSERT INTO
         order_status,
         order_date
     )
+SELECT ((gs - 1) % 1000) + 1, ((gs - 1) % 1000) * 2 + 1, ((gs - 1) % 1000) * 2 + 2, NULL, (
+        ARRAY[
+            'Pending', 'Completed', 'Shipped', 'Cancelled'
+        ]
+    ) [floor(RANDOM() * 4) + 1], CURRENT_TIMESTAMP - (
+        floor(RANDOM() * 30) || ' days'
+    )::interval
+FROM generate_series(1, 1500) gs;
+
+SELECT COUNT(*) FROM Orders;
+
+-- Generates 4500 Order Items (3 items per order)
+
+INSERT INTO
+    Order_Items (
+        order_id,
+        variant_id,
+        quantity,
+        unit_price,
+        total_price
+    )
+SELECT o.order_id, ((o.order_id - 1) * 3 + gs), floor(RANDOM() * 5 + 1), p.base_price, p.base_price * floor(RANDOM() * 5 + 1)
+FROM
+    Orders o
+    CROSS JOIN generate_series(1, 3) gs
+    JOIN Product_Variants pv ON pv.variant_id = ((o.order_id - 1) * 3 + gs)
+    JOIN Products p ON p.product_id = pv.product_id;
+
+SELECT COUNT(*) FROM Order_Items;
+
+-- Updated Order tatals
+
+UPDATE Orders o
+SET
+    total_amount = sub.total
+FROM (
+        SELECT order_id, SUM(total_price) AS total
+        FROM Order_Items
+        GROUP BY
+            order_id
+    ) sub
+WHERE
+    o.order_id = sub.order_id;
+
+-- Generates 1500 Payments
+
+INSERT INTO
+    Payments (
+        order_id,
+        amount,
+        payment_method,
+        payment_status,
+        transaction_reference
+    )
 SELECT
-    c.customer_id,
-    sa.address_id,
-    ba.address_id,
-    CASE
-        WHEN RANDOM() < 0.3 THEN (
-            SELECT discount_id
-            FROM Discounts
-            ORDER BY RANDOM()
-            LIMIT 1
-        )
-        ELSE NULL
-    END,
+    order_id,
+    total_amount,
+    (
+        ARRAY[
+            'Credit Card',
+            'Bkash',
+            'Cash on Delivery',
+            'Paypal'
+        ]
+    ) [floor(RANDOM() * 4) + 1],
     (
         ARRAY[
             'Pending',
             'Completed',
-            'Shipped',
-            'Cancelled'
+            'Failed'
         ]
-    ) [floor(RANDOM() * 4) + 1],
-    CURRENT_TIMESTAMP - (
-        (floor(RANDOM() * 30)) || ' days'
-    )::interval
-FROM
-    generate_series(1, 1500) gs
-    JOIN Customer c ON c.customer_id = ((gs - 1) % 1000 + 1)
-    JOIN Customer_Address sa ON sa.customer_id = c.customer_id
-    AND sa.address_type = 'Shipping'
-    JOIN Customer_Address ba ON ba.customer_id = c.customer_id
-    AND ba.address_type = 'Billing';
-SELECT 'Categories' AS table_name, COUNT(*) AS row_count
-FROM Categories
-UNION ALL
-SELECT 'Products', COUNT(*)
-FROM Products
-UNION ALL
-SELECT 'Product_Variants', COUNT(*)
-FROM Product_Variants
-UNION ALL
-SELECT 'Customer', COUNT(*)
-FROM Customer
-UNION ALL
-SELECT 'Customer_Address', COUNT(*)
-FROM Customer_Address
-UNION ALL
-SELECT 'Discounts', COUNT(*)
-FROM Discounts
-UNION ALL
+    ) [floor(RANDOM() * 3) + 1],
+    'TXN-' || order_id
+FROM Orders;
+
+-- Generates Return (8%)
+
+INSERT INTO
+    Returns (
+        order_item_id,
+        return_reason,
+        refund_amount,
+        return_status
+    )
+SELECT order_item_id, (
+        ARRAY[
+            'Damaged product', 'Wrong item sent', 'Not satisfied'
+        ]
+    ) [floor(RANDOM() * 3) + 1], ROUND(
+        (total_price * RANDOM())::numeric, 2
+    ), (
+        ARRAY[
+            'Requested', 'Approved', 'Rejected'
+        ]
+    ) [floor(RANDOM() * 3) + 1]
+FROM Order_Items
+WHERE
+    RANDOM() < 0.08;
+
+-- Check
 SELECT 'Orders', COUNT(*)
 FROM Orders
 UNION ALL
@@ -332,3 +360,10 @@ FROM Payments
 UNION ALL
 SELECT 'Returns', COUNT(*)
 FROM Returns;
+
+SELECT p.product_name, c.category_name, pv.variant_name
+FROM
+    products p
+    JOIN categories c ON p.category_id = c.category_id
+    LEFT JOIN product_variants pv ON p.product_id = pv.product_id
+ORDER BY c.category_name, p.product_name;
