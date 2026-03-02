@@ -1,3 +1,4 @@
+-- Remove all sample data from the database
 TRUNCATE TABLE Returns,
 Payments,
 Order_Items,
