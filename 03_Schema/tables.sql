@@ -11,7 +11,6 @@ CREATE TABLE Customer (
     is_active BOOLEAN DEFAULT TRUE
 );
 
-
 -- Customer Address  table
 CREATE TABLE Customer_Address (
     address_id SERIAL PRIMARY KEY,
@@ -33,7 +32,6 @@ CREATE TABLE Categories (
     CONSTRAINT fk_parent_category Foreign Key (parent_category_id) REFERENCES Categories (category_id) ON DELETE SET NULL
 );
 
-
 -- Products table
 CREATE TABLE Products (
     product_id SERIAL PRIMARY KEY,
@@ -44,7 +42,6 @@ CREATE TABLE Products (
     is_active BOOLEAN DEFAULT TRUE,
     CONSTRAINT fk_product_category FOREIGN KEY (category_id) REFERENCES Categories (category_id) ON DELETE CASCADE
 );
-
 
 -- Product Variants table
 CREATE TABLE Product_Variants (
@@ -60,7 +57,6 @@ CREATE TABLE Product_Variants (
     CONSTRAINT fk_variant_product Foreign Key (product_id) REFERENCES Products (product_id) ON DELETE CASCADE
 );
 
-
 -- Discounts table
 CREATE TABLE Discounts (
     discount_id SERIAL PRIMARY KEY,
@@ -71,7 +67,6 @@ CREATE TABLE Discounts (
     end_date DATE,
     is_active BOOLEAN DEFAULT TRUE
 );
-
 
 -- Orders table
 CREATE TABLE Orders (
@@ -87,10 +82,8 @@ CREATE TABLE Orders (
     CONSTRAINT fk_order_customer Foreign Key (customer_id) REFERENCES Customer (customer_id) ON Delete CASCADE,
     CONSTRAINT fk_order_shipping_address Foreign Key (shipping_address_id) REFERENCES Customer_Address (address_id) ON DELETE Set NULL,
     CONSTRAINT fk_order_billing_addresss Foreign Key (billing_address_id) REFERENCES Customer_Address (address_id) on delete set NULL,
-    CONSTRAINT fk_order_billing_address Foreign Key (Billing_address_id) REFERENCES Customer_Address (address_id) on delete set NULL,
     CONSTRAINT fk_order_discount Foreign Key (discount_id) REFERENCES Discounts (discount_id) On delete set NULL
 );
-
 
 -- Order Items table
 CREATE TABLE Order_Items (
@@ -104,7 +97,6 @@ CREATE TABLE Order_Items (
     CONSTRAINT fk_orderitem_variant FOREIGN KEY (variant_id) REFERENCES Product_Variants (variant_id) ON DELETE SET NULL
 );
 
-
 -- Payments table
 CREATE TABLE Payments (
     payment_id SERIAL PRIMARY KEY,
@@ -116,7 +108,6 @@ CREATE TABLE Payments (
     transaction_reference VARCHAR(100),
     CONSTRAINT fk_payment_order Foreign Key (order_id) REFERENCES Orders (order_id) on delete CASCADE
 );
-
 
 -- Returns table
 CREATE TABLE Returns (
