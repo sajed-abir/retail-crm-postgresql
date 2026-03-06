@@ -24,5 +24,23 @@ GROUP BY payment_status;
 
 -- 04. Monthly Payment Revenue
 SELECT
-    DATE_TRUC('month', payment_date) AS mothth,
-    
+    TO_CHAR(payment_date, 'Month') AS month,
+    round(sum(amount),2) AS monthly_revenue
+FROM payments
+WHERE payment_status = 'Completed'
+GROUP BY month
+ORDER BY month;
+
+-- 05. Average Payment Value
+SELECT round(avg(amount),2) as avg_payment_value
+FROM payments
+WHERE payment_status ='Completed';
+
+-- 06. Payment Method Success Rate
+SELECT
+    payment_method,
+    payment_status,
+    count(*) AS transactions
+FROM payments
+GROUP BY payment_method, payment_status
+ORDER BY payment_method
